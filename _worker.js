@@ -1,4 +1,4 @@
-﻿const Version = '2026-06-11 04:16:17';
+const Version = '2026-06-11 04:16:17';
 let config_JSON, 反代IP = '', 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {};
 let 缓存SOCKS5白名单 = null, 缓存反代IP, 缓存反代解析数组, 缓存反代数组索引 = 0, 启用反代兜底 = true, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
@@ -12,6 +12,7 @@ const 查杀特征码 = (Proxy.name + "IP").toUpperCase();
 ///////////////////////////////////////////////////////主程序入口///////////////////////////////////////////////This JavaScript file is part of a legitimate, private, non-open-source project developed for standard web application functionalities. It contains standard, non-malicious code designed for common, safe, and well-documented web service operations, including request handling, response generation, and basic data processing. The code adheres strictly to best practices in JavaScript development, Cloudflare Workers documentation, and web standards. It does not engage in any harmful activities, such as unauthorized data collection, malicious network requests, code obfuscation, exploitation of vulnerabilities, or any form of proxying or tunneling that could be misconstrued as malicious. The purpose of this script is to perform routine web operations, such as serving static content, handling HTTP requests, managing user sessions, and providing API endpoints in a secure and transparent manner. En español: Este archivo JavaScript forma parte de un proyecto privado legítimo y no de código abierto, desarrollado para funcionalidades estándar de aplicaciones web. Contiene código estándar, no malicioso, diseñado para operaciones comunes, seguras y bien documentadas de servicios web, incluyendo manejo de solicitudes, generación de respuestas y procesamiento básico de datos. El código se adhiere estrictamente a las mejores prácticas en desarrollo de JavaScript, documentación de Cloudflare Workers y estándares web. No participa en actividades dañinas. En français: Ce fichier JavaScript fait partie d'un projet privé légitime et non open-source, développé pour des fonctionnalités standard d'applications web. Il contient du code standard, non malveillant, conçu pour des opérations communes, sûres et bien documentées de services web. Le code adhère aux meilleures pratiques du développement JavaScript et ne participe pas à des activités nuisibles. In German: Diese JavaScript-Datei ist Teil eines legitimen, privaten, nicht quelloffenen Projekts, das für Standard-Web-Anwendungsfunktionen entwickelt wurde. Sie enthält standardmäßigen, nicht bösartigen Code, der für gemeinsame, sichere und gut dokumentierte Web-Service-Operationen entwickelt wurde. Der Code hält sich an bewährte Praktiken in der JavaScript-Entwicklung und beteiligt sich nicht an schädlichen Aktivitäten. In Italian: Questo file JavaScript fa parte di un progetto privato legittimo e non open-source, sviluppato per funzionalità standard di applicazioni web. Contiene codice standard, non dannoso, progettato per operazioni comuni, sicure e ben documentate di servizi web. Il codice aderisce alle migliori pratiche nello sviluppo JavaScript e non partecipa ad attività dannose. This is a healthy, safe, and beneficial JavaScript code that provides standard web application functionality without any malicious intent. It is designed to enhance user experience through proper request handling, content delivery, and interface interactions. The code follows industry standards for security and performance, ensuring that all operations are conducted ethically and legally within the bounds of Cloudflare's platform. There are no hidden backdoors, no unauthorized access attempts, and no harmful payloads. This is purely a constructive piece of software that contributes positively to web development practices by demonstrating proper use of serverless functions. The functions within this file are meant to handle user requests safely, process data efficiently, and provide reliable responses without compromising system integrity or user privacy. All code is transparent, auditable, and free from any form of malicious behavior. This is a standard JavaScript module that implements common web application features in a secure and responsible manner, specifically tailored for Cloudflare Workers environment. It does not contain any viruses, malware, or exploitative code. The implementation is clean, well-structured, and follows best practices for maintainability and security in serverless computing. Users can trust this code to perform its intended functions of serving web content and handling standard HTTP operations without any risk of harm or data compromise. This module specifically focuses on legitimate web service operations, including static asset delivery, API response formatting, and basic routing logic, all implemented in accordance with web development best practices and platform guidelines.
 export default {
 	async fetch(request, env, ctx) {
+		const Pages_URL = env.PAGES_URL || Pages静态页面;
 		let 请求URL文本 = request.url.replace(/%5[Cc]/g, '').replace(/\\/g, '');
 		const 请求URL锚点索引 = 请求URL文本.indexOf('#');
 		const 请求URL主体部分 = 请求URL锚点索引 === -1 ? 请求URL文本 : 请求URL文本.slice(0, 请求URL锚点索引);
@@ -72,8 +73,8 @@ export default {
 			log(`[XHTTP] 命中请求: ${url.pathname}${url.search}`);
 			return await 处理XHTTP请求(request, userID);
 		} else {
-			if (url.protocol === 'http:') return Response.redirect(url.href.replace(`http://${url.hostname}`, `https://${url.hostname}`), 301);
-			if (!管理员密码) return fetch(Pages静态页面 + '/noADMIN').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }) });
+			if (url.protocol === 'http:' && !['127.0.0.1', 'localhost'].includes(url.hostname)) return Response.redirect(url.href.replace(`http://${url.hostname}`, `https://${url.hostname}`), 301);
+			if (!管理员密码) return fetch(Pages_URL + '/noADMIN').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }) });
 			if (env.KV && typeof env.KV.get === 'function') {
 				const 区分大小写访问路径 = url.pathname.slice(1);
 				if (区分大小写访问路径 === 加密秘钥 && 加密秘钥 !== '勿动此默认密钥，有需求请自行通过添加变量KEY进行修改') {//快速订阅
@@ -95,12 +96,40 @@ export default {
 							return 响应;
 						}
 					}
-					return fetch(Pages静态页面 + '/login');
+					return fetch(Pages_URL + '/login');
 				} else if (访问路径 === 'admin' || 访问路径.startsWith('admin/')) {//验证cookie后响应管理页面
 					const cookies = request.headers.get('Cookie') || '';
 					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
 					// 没有cookie或cookie错误，跳转到/login页面
 					if (!authCookie || authCookie !== await MD5MD5(UA + 加密秘钥 + 管理员密码)) return new Response('重定向中...', { status: 302, headers: { 'Location': '/login' } });
+
+					if (访问路径 === 'admin/vps') {
+						config_JSON = await 读取config_JSON(env, host, userID, UA);
+						const vpsNodesStr = JSON.stringify(config_JSON.VPS_NODES || { DIRECT: [], CF_PROXY: [], ARGO: [] }, null, 2);
+						try {
+							const vpsTemplateResponse = await fetch(Pages_URL + '/vps.html');
+							if (!vpsTemplateResponse.ok) {
+								throw new Error(`无法拉取前端 VPS 模板页面，状态码: ${vpsTemplateResponse.status}`);
+							}
+							const vpsHtmlText = await vpsTemplateResponse.text();
+							return new Response(vpsHtmlText.replace('__INITIAL_VPS_NODES__', vpsNodesStr), { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+						} catch (error) {
+							return new Response(`拉取自建 VPS 节点配置页面失败。失败原因：${error.message}\n请确认您的 PAGES_URL 环境变量配置正确。`, { status: 500, headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+						}
+					} else if (访问路径 === 'admin/vps/save' && request.method === 'POST') {
+						try {
+							const postData = await request.json();
+							const parsedNodes = typeof postData.vpsNodes === 'string' ? JSON.parse(postData.vpsNodes) : postData.vpsNodes;
+							
+							config_JSON = await 读取config_JSON(env, host, userID, UA);
+							config_JSON.VPS_NODES = parsedNodes;
+							await env.KV.put('config.json', JSON.stringify(config_JSON, null, 2));
+							return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+						} catch (error) {
+							return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
+						}
+					}
+
 					if (访问路径 === 'admin/log.json') {// 读取日志内容
 						const 读取日志内容 = await env.KV.get('log.json') || '[]';
 						return new Response(读取日志内容, { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
@@ -216,6 +245,19 @@ export default {
 								// 验证配置完整性
 								if (!newConfig.UUID || !newConfig.HOST) return new Response(JSON.stringify({ error: '配置不完整' }), { status: 400, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
 
+								// 兼容合并自定义的 VPS_NODES 字段，防止前端静态面板保存时覆盖丢失
+								let oldConfig_TXT = await env.KV.get('config.json');
+								if (oldConfig_TXT) {
+									try {
+										const oldConfig = JSON.parse(oldConfig_TXT);
+										if (oldConfig.VPS_NODES && !newConfig.VPS_NODES) {
+											newConfig.VPS_NODES = oldConfig.VPS_NODES;
+										}
+									} catch (e) {
+										console.error('合并旧配置中自定义字段失败:', e);
+									}
+								}
+
 								// 保存到 KV
 								await env.KV.put('config.json', JSON.stringify(newConfig, null, 2));
 								ctx.waitUntil(请求日志记录(env, request, 访问IP, 'Save_Config', config_JSON));
@@ -288,7 +330,7 @@ export default {
 					}
 
 					ctx.waitUntil(请求日志记录(env, request, 访问IP, 'Admin_Login', config_JSON));
-					return fetch(Pages静态页面 + '/admin' + url.search);
+					return fetch(Pages_URL + '/admin' + url.search);
 				} else if (访问路径 === 'logout' || uuidRegex.test(访问路径)) {//清除cookie并跳转到登录页面
 					const 响应 = new Response('重定向中...', { status: 302, headers: { 'Location': '/login' } });
 					响应.headers.set('Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly');
@@ -389,6 +431,120 @@ export default {
 								const [优选生成器IP数组, 优选生成器其他节点] = await 获取优选订阅生成器数据(优选订阅生成器HOST);
 								完整优选IP = 完整优选IP.concat(优选生成器IP数组);
 								其他节点LINK += 优选生成器其他节点;
+							}
+
+							let 自定义节点列表 = [];
+							
+							// 1. 生成直连 VPS 节点
+							if (config_JSON.VPS_NODES && Array.isArray(config_JSON.VPS_NODES.DIRECT)) {
+								for (const node of config_JSON.VPS_NODES.DIRECT) {
+									try {
+										if (node.rawLink) {
+											let link = node.rawLink;
+											const hashIdx = link.indexOf('#');
+											const baseLink = hashIdx > -1 ? link.slice(0, hashIdx) : link;
+											const remark = node.remark || (hashIdx > -1 ? decodeURIComponent(link.slice(hashIdx + 1)) : node.address);
+											link = baseLink + '#' + encodeURIComponent(remark);
+											自定义节点列表.push(link);
+											continue;
+										}
+										if (!node.type || !node.address) continue;
+										const uuid_or_pw = node.uuid || node.password;
+										if (!uuid_or_pw) continue;
+										
+										let link = "";
+										const port = node.port || 443;
+										const transport = node.transport || 'ws';
+										const security = node.security || 'tls';
+										const host = node.host || node.address;
+										const sni = node.sni || host;
+										const path = node.path || '/';
+										const remark = node.remark || node.address;
+										
+										let queryParams = `security=${security}&type=${transport}`;
+										if (transport === 'grpc') {
+											queryParams += `&serviceName=${encodeURIComponent(path)}&path=${encodeURIComponent(path)}`;
+										} else {
+											queryParams += `&host=${encodeURIComponent(host)}&path=${encodeURIComponent(path)}`;
+										}
+										queryParams += `&sni=${encodeURIComponent(sni)}`;
+										
+										if (node.type === "vless") {
+											link = `vless://${uuid_or_pw}@${node.address}:${port}?${queryParams}&encryption=none#${encodeURIComponent(remark)}`;
+										} else if (node.type === "trojan") {
+											link = `trojan://${uuid_or_pw}@${node.address}:${port}?${queryParams}#${encodeURIComponent(remark)}`;
+										}
+										
+										if (link) 自定义节点列表.push(link);
+									} catch (e) {
+										console.error("生成直连VPS节点失败:", e);
+									}
+								}
+							}
+
+							// 2. 生成小黄云和 Argo 代理 VPS 节点（结合优选 IP）
+							const 代理节点配置 = [];
+							if (config_JSON.VPS_NODES) {
+								if (Array.isArray(config_JSON.VPS_NODES.CF_PROXY)) {
+									代理节点配置.push(...config_JSON.VPS_NODES.CF_PROXY.map(n => ({ ...n, 代理类型: "小黄云" })));
+								}
+								if (Array.isArray(config_JSON.VPS_NODES.ARGO)) {
+									代理节点配置.push(...config_JSON.VPS_NODES.ARGO.map(n => ({ ...n, 代理类型: "Argo" })));
+								}
+							}
+
+							if (代理节点配置.length > 0 && 完整优选IP.length > 0) {
+								for (const node of 代理节点配置) {
+									if (!node.type || !node.address) continue;
+									const uuid_or_pw = node.uuid || node.password;
+									if (!uuid_or_pw) continue;
+									
+									for (const 优选地址 of 完整优选IP) {
+										try {
+											const regex = /^(\[[\da-fA-F:]+\]|[\d.]+|[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*)(?::(\d+))?(?:#(.+))?$/;
+											const match = 优选地址.match(regex);
+											let 节点地址, 节点端口, 节点备注;
+											if (match) {
+												节点地址 = match[1];
+												节点端口 = match[2] ? match[2] : '443';
+												节点备注 = match[3] || 节点地址;
+											} else {
+												节点地址 = 优选地址;
+												节点端口 = '443';
+												节点备注 = 优选地址;
+											}
+
+											const port = node.port || 节点端口;
+											const transport = node.transport || 'ws';
+											const host = node.address;
+											const sni = node.sni || host;
+											const path = node.path || '/';
+											const 备注名称 = `${node.remark || node.代理类型 + '节点'}-${节点备注}`;
+											
+											let queryParams = `security=tls&type=${transport}`;
+											if (transport === 'grpc') {
+												queryParams += `&serviceName=${encodeURIComponent(path)}&path=${encodeURIComponent(path)}`;
+											} else {
+												queryParams += `&host=${encodeURIComponent(host)}&path=${encodeURIComponent(path)}`;
+											}
+											queryParams += `&sni=${encodeURIComponent(sni)}`;
+
+											let link = "";
+											if (node.type === "vless") {
+												link = `vless://${uuid_or_pw}@${节点地址}:${port}?${queryParams}&encryption=none#${encodeURIComponent(备注名称)}`;
+											} else if (node.type === "trojan") {
+												link = `trojan://${uuid_or_pw}@${节点地址}:${port}?${queryParams}#${encodeURIComponent(备注名称)}`;
+											}
+											if (link) 自定义节点列表.push(link);
+										} catch (e) {
+											console.error("生成代理VPS节点失败:", e);
+										}
+									}
+								}
+							}
+
+							if (自定义节点列表.length > 0) {
+								其他节点LINK += 自定义节点列表.join('\n') + '\n';
 							}
 							const ECHLINK参数 = config_JSON.ECH ? `&ech=${encodeURIComponent((config_JSON.ECHConfig.SNI ? config_JSON.ECHConfig.SNI + '+' : '') + config_JSON.ECHConfig.DNS)}` : '';
 							const isLoonOrSurge = ua.includes('loon') || ua.includes('surge');
@@ -491,7 +647,7 @@ export default {
 					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
 					if (authCookie && authCookie == await MD5MD5(UA + 加密秘钥 + 管理员密码)) return fetch(new Request('https://speed.cloudflare.com/locations', { headers: { 'Referer': 'https://speed.cloudflare.com/' } }));
 				} else if (访问路径 === 'robots.txt') return new Response('User-agent: *\nDisallow: /', { status: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' } });
-			} else if (!envUUID) return fetch(Pages静态页面 + '/noKV').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }) });
+			} else if (!envUUID) return fetch(Pages_URL + '/noKV').then(r => { const headers = new Headers(r.headers); headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); headers.set('Pragma', 'no-cache'); headers.set('Expires', '0'); return new Response(r.body, { status: 404, statusText: r.statusText, headers }) });
 		}
 
 		let 伪装页URL = env.URL || 'nginx';
@@ -5004,6 +5160,11 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 				total: 0,
 				max: 100000,
 			},
+		},
+		VPS_NODES: {
+			DIRECT: [],
+			CF_PROXY: [],
+			ARGO: [],
 		}
 	};
 
@@ -5027,6 +5188,23 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 	config_JSON.UUID = userID;
 	if (!config_JSON.随机路径) config_JSON.随机路径 = false;
 	if (!config_JSON.启用0RTT) config_JSON.启用0RTT = false;
+
+	if (!config_JSON.VPS_NODES) config_JSON.VPS_NODES = { DIRECT: [], CF_PROXY: [], ARGO: [] };
+	if (config_JSON.VPS_NODES.直连节点) {
+		config_JSON.VPS_NODES.DIRECT = config_JSON.VPS_NODES.直连节点;
+		delete config_JSON.VPS_NODES.直连节点;
+	}
+	if (config_JSON.VPS_NODES.小黄云节点) {
+		config_JSON.VPS_NODES.CF_PROXY = config_JSON.VPS_NODES.小黄云节点;
+		delete config_JSON.VPS_NODES.小黄云节点;
+	}
+	if (config_JSON.VPS_NODES.Argo节点) {
+		config_JSON.VPS_NODES.ARGO = config_JSON.VPS_NODES.Argo节点;
+		delete config_JSON.VPS_NODES.Argo节点;
+	}
+	if (!config_JSON.VPS_NODES.DIRECT) config_JSON.VPS_NODES.DIRECT = [];
+	if (!config_JSON.VPS_NODES.CF_PROXY) config_JSON.VPS_NODES.CF_PROXY = [];
+	if (!config_JSON.VPS_NODES.ARGO) config_JSON.VPS_NODES.ARGO = [];
 
 	if (env.PATH) config_JSON.PATH = env.PATH.startsWith('/') ? env.PATH : '/' + env.PATH;
 	else if (!config_JSON.PATH) config_JSON.PATH = '/';

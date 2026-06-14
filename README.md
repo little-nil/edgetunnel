@@ -202,6 +202,149 @@
 - [1345695](https://github.com/1345695/edcloudwasm)
 - [ToiCF/GrainTCP](https://github.com/ToiCF/GrainTCP)
 
+## 🖥️ VPS 端自建节点部署与证书申请指南
+
+本项目已支持在 `config.json` 中配置自定义的自建 VPS 节点（通过 `VPS_NODES` 顶级字段），支持直连、小黄云 CDN 代理与 Argo 隧道中转三种模式。这些自建节点将与 Cloudflare 优选 IP 进行动态映射，并在客户端订阅中一并输出。
+
+以下是三种模式在 VPS 端的 Xray 部署配置以及配套的 SSL/TLS 证书申请与使用明细：
+
+### 🔑 1. SSL/TLS 证书申请与使用指南
+
+对于不同的运行模式，需要选择对应的证书签发模式：
+
+#### 方案 A：Cloudflare Origin CA 证书（推荐用于 小黄云代理模式）
+Origin CA 证书由 Cloudflare 自签，专用于“Cloudflare 边缘节点到 VPS 源服务器”之间的加密。其最大优势是**免费且有效期长达 15 年**。
+* **适用场景**：开启了小黄云（Proxy）的小黄云代理节点。
+* **局限性**：客户端如果直连此证书的域名会报证书不可信，因此不可用于“直连节点”。
+* **申请步骤**：
+  1. 登录 Cloudflare 控制台 -> 选择您的域名。
+  2. 导航至 `SSL/TLS` -> `源服务器` (Origin Server)。
+  3. 点击 `创建证书` (Create Certificate)，密钥类型选择默认的 `RSA (2048)`，有效期限选择 `15 年`。
+  4. 点击创建后，复制并保存证书内容为 `public.crt`（或 `server.crt`），保存私钥内容为 `private.key` 并上传至 VPS 的 Xray 证书路径中。
+
+#### 方案 B：acme.sh 自动申请 Let's Encrypt 证书（推荐用于 直连模式）
+普通直连模式下，客户端直接与 VPS 进行握手，必须使用全球受信的普通商业证书。可以使用 `acme.sh` 脚本通过 Cloudflare DNS API 自动申请和维护。
+* **适用场景**：直连 VPS 节点。
+* **申请步骤**：
+  1. 在 VPS 上安装 `acme.sh` 客户端：
+     ```bash
+     curl https://get.acme.sh | sh
+     ```
+  2. 获取您的 Cloudflare 全局 API Key（在 CF 控制台 -> 我的个人资料 -> API 令牌 -> Global API Key）。
+  3. 在终端设置环境变量：
+     ```bash
+     export CF_Key="您的Cloudflare_Global_API_Key"
+     export CF_Email="您的Cloudflare注册邮箱"
+     ```
+  4. 使用 DNS 验证方式申请证书（自动在域名下创建 TXT 记录进行验证并签发）：
+     ```bash
+     ~/.acme.sh/acme.sh --issue --dns dns_cf -d yourdomain.com -d *.yourdomain.com
+     ```
+  5. 证书签发成功后，安装到指定路径（如 `/etc/xray/`）：
+     ```bash
+     ~/.acme.sh/acme.sh --install-cert -d yourdomain.com \
+       --key-file       /etc/xray/private.key \
+       --fullchain-file /etc/xray/public.crt \
+       --reloadcmd     "systemctl restart xray"
+     ```
+
+---
+
+### ⚙️ 2. Xray 配置文件典型模板
+
+将以下 JSON 内容保存为 VPS 上的 Xray 配置文件（通常位于 `/etc/xray/config.json`）。
+
+#### 模板一：直连模式 与 小黄云代理模式（VLESS + WS + TLS）
+这两种模式在 Xray 端配置完全一致，均监听 `443` 端口并使用 TLS 握手。差异仅在于：直连模式使用 acme.sh 申请的商业证书，小黄云模式推荐使用 Origin CA 证书。
+```json
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "你的UUID"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/etc/xray/public.crt",
+              "keyFile": "/etc/xray/private.key"
+            }
+          ]
+        },
+        "wsSettings": {
+          "path": "/vless-ws"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom"
+    }
+  ]
+}
+```
+
+#### 模板二：Argo 隧道中转模式（VLESS + WS，无 TLS 卸载）
+Argo 隧道将本地端口穿透出去。在 VPS 内部，`cloudflared` 接收并解密 TLS 请求，再将纯 HTTP/WS 流量转发给本地 of Xray，因此 Xray 侧不需要配置 TLS 证书。
+```json
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 8000,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "你的UUID"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "/argo-ws"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom"
+    }
+  ]
+}
+```
+**配套的 Argo 隧道启动方法**：
+1. 下载并在 VPS 上安装 `cloudflared`。
+2. 运行快速隧道（临时测试）：
+   ```bash
+   cloudflared tunnel --url http://127.0.0.1:8000
+   ```
+   它会输出一个临时的 trycloudflare 子域名，例如 `xxx.trycloudflare.com`，将该域名作为 `Argo节点` 配置的 `address` 即可。
+3. 创建永久隧道（推荐）：
+   * 执行 `cloudflared tunnel login` 登录并授权域名。
+   * 创建隧道：`cloudflared tunnel create my-tunnel`
+   * 配置转发规则（`config.yml`）将隧道指向 `http://127.0.0.1:8000` 并通过 `cloudflared tunnel route dns` 将其绑定到您自己的二级域名。
+
 ---
 
 ## ⚠️ 免责声明
