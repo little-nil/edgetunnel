@@ -119,6 +119,7 @@
 | 变量名 | 必填 | 示例 | 详细备注 |
 | :--- | :---: | :--- | :--- |
 | **ADMIN** | ✅ | `123456` | 后台管理面板登录密码 |
+| **PAGES_URL** | ❌ | `https://my-ui.pages.dev` | **【核心推荐】** 指向您私有化部署的前端 UI 域名（配合 `EDT-Pages` 实现前后端分离管理） |
 | **KEY** | ❌ | `CMLiussss` | 快速订阅路径密钥，访问 `/CMLiussss` 即可快速获取节点 |
 | **UUID** | ❌ | `90cd4a77-141a-43c9-991b-08263cfe9c10` | 强制固定UUID，只支持**UUIDv4**标准格式 |
 | **PROXYIP** | ❌ | `proxyip.cmliussss.net:443` | 全局自定义反代 IP  |
@@ -135,6 +136,8 @@
 如需修改 **订阅地址里的TOKEN** 和 **用于节点验证的UUID** ，可通过修改变量
 1. 修改`ADMIN`或`KEY`变量的值，可以随机修改 **订阅地址里的TOKEN** 和 **用于节点验证的UUID**
 2. 设置`UUID`变量可以强制固定 **订阅地址里的TOKEN** 和 **用于节点验证的UUID**，注意必须是**UUIDv4**标准格式，否则会导致节点无法使用。
+
+3. **点亮订阅节点的小国旗 (Emoji 魔法)**：如果您的优选节点没有显示国家小旗子，只需在管理面板录入 VPS 节点时，在节点名称末尾加上 `#国家名`（例如 `vless://...#美国节点`）。此时该 VPS 派生出的所有优选子节点都会自动识别“美国”二字，并在订阅转换时自动加上 🇺🇸 旗帜！
 
 本工具支持通过 **PATH路径** 动态切换底层代理方案：
 
@@ -169,6 +172,24 @@
 | **iOS** | [Surge](https://surgeapp.com/), [Shadowrocket](https://shadowrocket.com/), [Stash](https://stashapp.com/) | 完美适配 |
 | **MacOS** | [FlClash](https://github.com/chen08209/FlClash), [mihomo-party](https://github.com/mihomo-party-org/mihomo-party), [Clash Verge Rev](https://github.com/ClashVerge/ClashVerge-Rev), [Surge](https://surgeapp.com/) | M1/M2 完美兼容 |
 
+### 🚀 全平台客户端一键订阅闭环实操
+当您完成部署并进入后台管理面板后，系统会为您生成形如 `https://您的后端域名/ADMIN密码` 的专属订阅链接。
+该链接内置了 **UA (User-Agent) 智能识别**：无论是使用 V2ray 的 Base64 格式还是 Clash 的 Yaml 格式，它都能自动为您下发最匹配的配置！
+
+1. **Windows 端 (v2rayN / Clash Verge 等)**：
+   * 复制您的专属订阅链接。
+   * 打开软件 -> 找到 `订阅设置` (Subscription) -> 点击 `添加` (Add)。
+   * 将链接粘贴进 URL 栏并保存。
+   * 右键点击更新订阅，即可瞬间拉取几十上百个优选节点！
+2. **Android 端 (ClashMetaForAndroid / v2rayNG)**：
+   * 复制订阅链接 -> 打开软件 -> 点击 `配置` (Profiles)。
+   * 点击右上角 `+` 号 -> 选择 `从 URL 导入` (Import from URL)。
+   * 粘贴链接，保存并自动更新，选中刚刚下载的配置即可起飞。
+3. **iOS 端 (Shadowrocket 小火箭 / Surge)**：
+   * 复制链接 -> 打开 APP -> 点击右上角 `+` 号。
+   * 类型 (Type) 选择 `Subscribe` (订阅)。
+   * 粘贴 URL 并点击完成，向右滑动节点列表即可测试延迟。
+
 ---
 
 ## ⭐ 项目热度
@@ -202,148 +223,66 @@
 - [1345695](https://github.com/1345695/edcloudwasm)
 - [ToiCF/GrainTCP](https://github.com/ToiCF/GrainTCP)
 
-## 🖥️ VPS 端自建节点部署与证书申请指南
+## 🖥️ 深度硬核：全链路闭环与底层防坑 FAQ
 
-本项目已支持在 `config.json` 中配置自定义的自建 VPS 节点（通过 `VPS_NODES` 顶级字段），支持直连、小黄云 CDN 代理与 Argo 隧道中转三种模式。这些自建节点将与 Cloudflare 优选 IP 进行动态映射，并在客户端订阅中一并输出。
+本项目已支持在管理面板中录入自定义的自建 VPS 节点（直连、小黄云 CDN 代理、Argo 隧道中转）。这些母节点将与 Cloudflare 优选 IP 进行动态映射，衍生出海量优选子节点。
 
-以下是三种模式在 VPS 端的 Xray 部署配置以及配套的 SSL/TLS 证书申请与使用明细：
+以下是三大核心运行模式的全链路部署闭环：
 
-### 🔑 1. SSL/TLS 证书申请与使用指南
+### 1. 终极一键部署基座：mack-a 八合一脚本
+抛弃过去复杂的手工配置！我们强烈推荐使用业界最顶级的 `v2ray-agent` 脚本作为底层底座。它将“安装 Xray + 申请全球商业证书 + 拼装节点链接”浓缩为一键操作：
+```bash
+wget -P /root -N --no-check-certificate "https://raw.githubusercontent.com/mack-a/v2ray-agent/master/install.sh" && chmod 700 /root/install.sh && /root/install.sh
+```
 
-对于不同的运行模式，需要选择对应的证书签发模式：
+### 2. 神仙组合：一台 VPS 零冲突解锁三大模式（一鸭三吃）
+以该脚本为底座，您无需再手搓配置文件，即可在同一台机器上完美榨干直连、小黄云与 Argo 的价值，且绝对不会发生端口冲突！
 
-#### 方案 A：Cloudflare Origin CA 证书（推荐用于 小黄云代理模式）
-Origin CA 证书由 Cloudflare 自签，专用于“Cloudflare 边缘节点到 VPS 源服务器”之间的加密。其最大优势是**免费且有效期长达 15 年**。
-* **适用场景**：开启了小黄云（Proxy）的小黄云代理节点。
-* **局限性**：客户端如果直连此证书的域名会报证书不可信，因此不可用于“直连节点”。
-* **申请步骤**：
-  1. 登录 Cloudflare 控制台 -> 选择您的域名。
-  2. 导航至 `SSL/TLS` -> `源服务器` (Origin Server)。
-  3. 点击 `创建证书` (Create Certificate)，密钥类型选择默认的 `RSA (2048)`，有效期限选择 `15 年`。
-  4. 点击创建后，复制并保存证书内容为 `public.crt`（或 `server.crt`），保存私钥内容为 `private.key` 并上传至 VPS 的 Xray 证书路径中。
+#### 🦆 吃法 A：提取直连节点（开箱即用）
+脚本运行完毕后，会自动为您生成一条极速的 `VLESS+TCP+XTLS` 或 `VLESS+WS+TLS` 节点链接。
+您什么都不用改，直接将该链接贴入 EDT-Pages 前端面板，这就是最纯粹的顶级直连母节点。
 
-#### 方案 B：acme.sh 自动申请 Let's Encrypt 证书（推荐用于 直连模式）
-普通直连模式下，客户端直接与 VPS 进行握手，必须使用全球受信的普通商业证书。可以使用 `acme.sh` 脚本通过 Cloudflare DNS API 自动申请和维护。
-* **适用场景**：直连 VPS 节点。
-* **申请步骤**：
-  1. 在 VPS 上安装 `acme.sh` 客户端：
-     ```bash
-     curl https://get.acme.sh | sh
-     ```
-  2. 获取您的 Cloudflare 全局 API Key（在 CF 控制台 -> 我的个人资料 -> API 令牌 -> Global API Key）。
-  3. 在终端设置环境变量：
-     ```bash
-     export CF_Key="您的Cloudflare_Global_API_Key"
-     export CF_Email="您的Cloudflare注册邮箱"
-     ```
-  4. 使用 DNS 验证方式申请证书（自动在域名下创建 TXT 记录进行验证并签发）：
-     ```bash
-     ~/.acme.sh/acme.sh --issue --dns dns_cf -d yourdomain.com -d *.yourdomain.com
-     ```
-  5. 证书签发成功后，安装到指定路径（如 `/etc/xray/`）：
-     ```bash
-     ~/.acme.sh/acme.sh --install-cert -d yourdomain.com \
-       --key-file       /etc/xray/private.key \
-       --fullchain-file /etc/xray/public.crt \
-       --reloadcmd     "systemctl restart xray"
-     ```
+#### 🦆 吃法 B：提取小黄云 CDN 节点（借壳生蛋）
+脚本在配置时已帮您申请好了最高级别的 Let's Encrypt 商业证书，**这意味着您连那 15 年的 Cloudflare 源证书都不用去申请了！**
+1. 去 Cloudflare，将另一个二级域名（例如 `cdn.yourdomain.com`）解析到该 VPS IP。
+2. **点亮橙色小黄云**，并在 SSL/TLS 设置里强制选为 **“完全(严格) (Full Strict)”**。
+3. 把脚本刚才给您的那个 `VLESS+WS+TLS` 直连链接贴入前台面板。
+4. 将链接内部的 `host` 和 `sni` 参数修改为您的 `cdn.yourdomain.com` 即可完美复用！
+
+#### 🦆 吃法 C：提取 Argo 中转节点（内网暗道）
+Argo 模式只走本地局域网，根本不需要占用公网 443 端口，所以绝不会和脚本的 Nginx/Xray 抢端口。
+1. 在 VPS 上单独安装 `cloudflared` 服务。
+2. 找到脚本在底层给 VLESS+WS 开放的本地回环端口（例如监听在 `127.0.0.1:31234`）。
+3. 执行一条命令打通地下暗道：
+   ```bash
+   cloudflared tunnel run --url http://127.0.0.1:31234 my-tunnel
+   ```
+4. 在前台面板将链接中的 `host` 和 `sni` 替换为隧道生成的 Argo 域名即可！
+
+### 3. Cloudflare DNS 解析配合
+* **直连模式**：A 记录填 VPS IP，关闭小黄云（灰色）。
+* **小黄云模式**：A 记录填 VPS IP，开启小黄云（橙色）。`SSL/TLS` 模式必须选为 **“完全(严格) (Full Strict)”**。
+* **Argo 模式**：通过上文的 `route dns` 命令自动生成 CNAME，无需手动操作。
+
+### 4. 手工拼装母节点链接 (用于填入管理面板)
+当您配置好后端后，需要拼装一条标准的 VLESS 链接扔进控制面板中。
+* **标准格式**：`vless://[UUID]@[域名或IP]:443?encryption=none&security=tls&type=ws&host=[域名]&sni=[域名]&path=[路径]#[国家名称备注]`
+* **Argo 节点举例**：`vless://90cd...-c910@argo.yourdomain.com:443?encryption=none&security=tls&type=ws&host=argo.yourdomain.com&sni=argo.yourdomain.com&path=/argo-ws#香港Argo节点`
+
+### 5. 链接转换的终极黑魔法：域名前置 (Domain Fronting)
+为什么把链接填进面板后，生成的几百个节点全变成了 `104.16.x.x` 这种数字 IP？
+当系统为您生成优选子节点时，它会强行把链接里原本的 `@yourdomain.com` 替换为随机的优选 Anycast IP。但这并不影响连接，因为链接参数中的 `host` 和 `sni` 被死死绑定为了您的真实域名。
+数据包发往极速的优选入口 IP，Cloudflare 内网看到包上的 `SNI` 域名标签后，会瞬间将其完美路由给您的 VPS！
 
 ---
 
-### ⚙️ 2. Xray 配置文件典型模板
+## 🔒 隐私隔离防坑指南
 
-将以下 JSON 内容保存为 VPS 上的 Xray 配置文件（通常位于 `/etc/xray/config.json`）。
-
-#### 模板一：直连模式 与 小黄云代理模式（VLESS + WS + TLS）
-这两种模式在 Xray 端配置完全一致，均监听 `443` 端口并使用 TLS 握手。差异仅在于：直连模式使用 acme.sh 申请的商业证书，小黄云模式推荐使用 Origin CA 证书。
-```json
-{
-  "log": {
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "port": 443,
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          {
-            "id": "你的UUID"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "ws",
-        "security": "tls",
-        "tlsSettings": {
-          "certificates": [
-            {
-              "certificateFile": "/etc/xray/public.crt",
-              "keyFile": "/etc/xray/private.key"
-            }
-          ]
-        },
-        "wsSettings": {
-          "path": "/vless-ws"
-        }
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom"
-    }
-  ]
-}
-```
-
-#### 模板二：Argo 隧道中转模式（VLESS + WS，无 TLS 卸载）
-Argo 隧道将本地端口穿透出去。在 VPS 内部，`cloudflared` 接收并解密 TLS 请求，再将纯 HTTP/WS 流量转发给本地 of Xray，因此 Xray 侧不需要配置 TLS 证书。
-```json
-{
-  "log": {
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "listen": "127.0.0.1",
-      "port": 8000,
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          {
-            "id": "你的UUID"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "ws",
-        "wsSettings": {
-          "path": "/argo-ws"
-        }
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom"
-    }
-  ]
-}
-```
-**配套的 Argo 隧道启动方法**：
-1. 下载并在 VPS 上安装 `cloudflared`。
-2. 运行快速隧道（临时测试）：
-   ```bash
-   cloudflared tunnel --url http://127.0.0.1:8000
-   ```
-   它会输出一个临时的 trycloudflare 子域名，例如 `xxx.trycloudflare.com`，将该域名作为 `Argo节点` 配置的 `address` 即可。
-3. 创建永久隧道（推荐）：
-   * 执行 `cloudflared tunnel login` 登录并授权域名。
-   * 创建隧道：`cloudflared tunnel create my-tunnel`
-   * 配置转发规则（`config.yml`）将隧道指向 `http://127.0.0.1:8000` 并通过 `cloudflared tunnel route dns` 将其绑定到您自己的二级域名。
+> [!CAUTION]
+> **绝对不要泄露您的隐私配置！**
+> 1. 如果您 Fork 了本项目并在本地进行二次开发，请**务必确保** `.dev.vars` (存放密码) 和 `wrangler.toml` (内存放了您的 KV `id`) 没有被提交（Push）到公开的 GitHub 仓库中！
+> 2. `wrangler.toml` 中的 `[[kv_namespaces]]` 区块如果不小心提交到了公开仓库，任何人都可能恶意读取或篡改您的节点配置！
+> 3. 推荐使用 Cloudflare 控制台自带的环境变量配置界面（安全不公开），而非在代码库中硬编码。
 
 ---
 
