@@ -516,7 +516,7 @@ export default {
 
 											const port = node.port || 节点端口;
 											const transport = node.transport || 'ws';
-											const host = node.address;
+											const host = node.host || node.address;
 											const sni = node.sni || host;
 											const path = node.path || '/';
 											const 备注名称 = `${node.remark || node.代理类型 + '节点'}-${节点备注}`;
