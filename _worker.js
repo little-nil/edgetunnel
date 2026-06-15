@@ -113,12 +113,11 @@ export default {
 							}
 							const vpsHtmlText = await vpsTemplateResponse.text();
 							let replacedHtml = vpsHtmlText.replace('__INITIAL_VPS_NODES__', vpsNodesStr);
-							if (config_JSON.优选订阅?.SUBNAME) {
-								replacedHtml = replacedHtml.replace(/<title>.*?<\/title>/, `<title>${config_JSON.优选订阅.SUBNAME} VPS 节点</title>`);
-								replacedHtml = replacedHtml.replace(/edgetunnel VPS 节点/g, `${config_JSON.优选订阅.SUBNAME} VPS 节点`);
-							}
+							const subName = config_JSON.优选订阅生成?.SUBNAME || 'edgetunnel';
+							replacedHtml = replacedHtml.replace(/<title>.*?<\/title>/, `<title>${subName} - VPS节点管理</title>`);
+							
 							if (config_JSON.FAVICON) {
-								replacedHtml = replacedHtml.replace(/https:\/\/cloudflare-ipfs\.com\/ipfs\/bafybeigd6i5aavwpr6wvnwuyayklq3omonggta4x2q7kpmgafj357nkcky/g, config_JSON.FAVICON);
+								replacedHtml = replacedHtml.replace(/<\/head>/i, `\t<link rel="icon" type="image/x-icon" href="${config_JSON.FAVICON}">\n</head>`);
 							}
 							return new Response(replacedHtml, { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 						} catch (error) {
