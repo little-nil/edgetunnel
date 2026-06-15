@@ -5209,6 +5209,11 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 	}
 
 	if (!config_JSON.gRPCUserAgent) config_JSON.gRPCUserAgent = UA;
+	if (env.SUBNAME || env.TITLE) {
+		if (!config_JSON.优选订阅生成) config_JSON.优选订阅生成 = {};
+		config_JSON.优选订阅生成.SUBNAME = env.SUBNAME || env.TITLE;
+	}
+	if (env.FAVICON) config_JSON.FAVICON = env.FAVICON;
 	config_JSON.HOST = host;
 	if (!config_JSON.HOSTS) config_JSON.HOSTS = [hostname];
 	if (env.HOST) config_JSON.HOSTS = (await 整理成数组(env.HOST)).map(h => h.toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0]);
