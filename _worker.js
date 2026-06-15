@@ -112,7 +112,15 @@ export default {
 								throw new Error(`无法拉取前端 VPS 模板页面，状态码: ${vpsTemplateResponse.status}`);
 							}
 							const vpsHtmlText = await vpsTemplateResponse.text();
-							return new Response(vpsHtmlText.replace('__INITIAL_VPS_NODES__', vpsNodesStr), { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+							let replacedHtml = vpsHtmlText.replace('__INITIAL_VPS_NODES__', vpsNodesStr);
+							if (config_JSON.优选订阅?.SUBNAME) {
+								replacedHtml = replacedHtml.replace(/<title>.*?<\/title>/, `<title>${config_JSON.优选订阅.SUBNAME} VPS 节点</title>`);
+								replacedHtml = replacedHtml.replace(/edgetunnel VPS 节点/g, `${config_JSON.优选订阅.SUBNAME} VPS 节点`);
+							}
+							if (config_JSON.FAVICON) {
+								replacedHtml = replacedHtml.replace(/https:\/\/cloudflare-ipfs\.com\/ipfs\/bafybeigd6i5aavwpr6wvnwuyayklq3omonggta4x2q7kpmgafj357nkcky/g, config_JSON.FAVICON);
+							}
+							return new Response(replacedHtml, { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 						} catch (error) {
 							return new Response(`拉取自建 VPS 节点配置页面失败。失败原因：${error.message}\n请确认您的 PAGES_URL 环境变量配置正确。`, { status: 500, headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
 						}
@@ -5111,6 +5119,7 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 			TLS: true,
 		},
 		Fingerprint: "chrome",
+		FAVICON: env.FAVICON || "https://cloudflare-ipfs.com/ipfs/bafybeigd6i5aavwpr6wvnwuyayklq3omonggta4x2q7kpmgafj357nkcky",
 		优选订阅生成: {
 			local: true, // true: 基于本地的优选地址  false: 优选订阅生成器
 			本地IP库: {
@@ -5119,7 +5128,7 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 				指定端口: -1,
 			},
 			SUB: null,
-			SUBNAME: "edge" + "tunnel",
+			SUBNAME: env.SUBNAME || env.TITLE || "edge" + "tunnel",
 			SUBUpdateTime: 3, // 订阅更新时间（小时）
 			TOKEN: await MD5MD5(hostname + userID),
 		},

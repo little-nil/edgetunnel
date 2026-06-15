@@ -249,15 +249,42 @@ wget -P /root -N --no-check-certificate "https://raw.githubusercontent.com/mack-
 3. 把脚本刚才给您的那个 `VLESS+WS+TLS` 直连链接贴入前台面板。
 4. 将链接内部的 `host` 和 `sni` 参数修改为您的 `cdn.yourdomain.com` 即可完美复用！
 
-#### 🦆 吃法 C：提取 Argo 中转节点（内网暗道）
-Argo 模式只走本地局域网，根本不需要占用公网 443 端口，所以绝不会和脚本的 Nginx/Xray 抢端口。
-1. 在 VPS 上单独安装 `cloudflared` 服务。
-2. 找到脚本在底层给 VLESS+WS 开放的本地回环端口（例如监听在 `127.0.0.1:31234`）。
-3. 执行一条命令打通地下暗道：
-   ```bash
-   cloudflared tunnel run --url http://127.0.0.1:31234 my-tunnel
-   ```
-4. 在前台面板将链接中的 `host` 和 `sni` 替换为隧道生成的 Argo 域名即可！
+#### 🦆 吃法 C：提取 Argo 中转节点（保姆级内网穿透教程）
+Argo 模式的精髓在于**完全不暴露公网端口**，只走本地局域网（127.0.0.1），因此绝不会和脚本的 Nginx 抢 443 端口，极度安全隐蔽！
+
+**小白专属实操步骤（按顺序复制粘贴即可）：**
+
+**第一步：安装官方 cloudflared 组件**
+```bash
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+```
+
+**第二步：授权您的 Cloudflare 账号**
+```bash
+cloudflared tunnel login
+```
+*(执行后终端会弹出一个长链接，复制该链接到您的电脑浏览器中打开，选择您想要绑定的域名进行授权)*
+
+**第三步：创建专属隧道并绑定域名**
+假设您想用的 Argo 二级域名是 `argo.yourdomain.com`，隧道名字起为 `my-argo`：
+```bash
+# 1. 创建隧道
+cloudflared tunnel create my-argo
+# 2. 把隧道绑定到您的域名（会自动去 CF 给您添加一条 CNAME 解析记录）
+cloudflared tunnel route dns my-argo argo.yourdomain.com
+```
+
+**第四步：对准脚本端口，打通地道**
+通过八合一脚本配置好 `VLESS+WS` 后，找到该协议在底层的**本地回环端口**（假设为 `31234`）。
+执行以下命令，将刚才建好的隧道强行对准该本地端口，并在后台永久运行：
+```bash
+# 请把 31234 换成您脚本实际开放的 WS 端口
+nohup cloudflared tunnel run --url http://127.0.0.1:31234 my-argo > cloudflared.log 2>&1 &
+```
+
+**第五步：到前端面板拼装节点**
+此时这条隧道已经通了！直接在前台管理面板中，把那条 `VLESS+WS` 链接粘贴进去，然后将其中的 `host` 和 `sni` 全部修改为您的 `argo.yourdomain.com`，点击保存！系统会自动将外部入口替换为 Cloudflare 优选 IP，这就是完美的防封锁节点！
 
 ### 3. Cloudflare DNS 解析配合
 * **直连模式**：A 记录填 VPS IP，关闭小黄云（灰色）。
