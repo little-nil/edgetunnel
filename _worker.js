@@ -4493,7 +4493,10 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 			}
 			if (需要处理gRPC) fullNode = 添加Flow格式gRPCUserAgent(fullNode);
 			if (需要处理ECH && 获取凭据值(fullNode, true) === uuid.trim()) {
-				fullNode = fullNode.replace(/\}(\s*)$/, `, ech-opts: {enable: true${ECH_SNI ? `, query-server-name: ${ECH_SNI}` : ''}}}$1`);
+				const isDirect = /(直连|direct)/i.test(fullNode);
+				if (!isDirect) {
+					fullNode = fullNode.replace(/\}(\s*)$/, `, ech-opts: {enable: true${ECH_SNI ? `, query-server-name: ${ECH_SNI}` : ''}}}$1`);
+				}
 			}
 			processedLines.push(fullNode);
 			i++;
@@ -4525,7 +4528,12 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 				nodeLines = 添加Block格式gRPCUserAgent(nodeLines, topLevelIndent);
 				nodeText = nodeLines.join('\n');
 			}
-			if (需要处理ECH && 获取凭据值(nodeText, false) === uuid.trim()) nodeLines = 添加Block格式ECHOpts(nodeLines, topLevelIndent);
+			if (需要处理ECH && 获取凭据值(nodeText, false) === uuid.trim()) {
+				const isDirect = /(直连|direct)/i.test(nodeText);
+				if (!isDirect) {
+					nodeLines = 添加Block格式ECHOpts(nodeLines, topLevelIndent);
+				}
+			}
 			processedLines.push(...nodeLines);
 		} else {
 			processedLines.push(line);
@@ -4799,11 +4807,14 @@ async function Singbox订阅配置文件热补丁(SingBox_原始订阅内容, co
 
 					// 如果提供了 ech_config，添加/更新 ech 配置
 					if (ECH启用) {
-						outbound.tls.ech = {
-							enabled: true,
-							query_server_name: ECH_SNI,// 等待 1.13.0+ 版本上线
-							//config: `-----BEGIN ECH CONFIGS-----\n${ech_config}\n-----END ECH CONFIGS-----`
-						};
+						const isDirect = /(直连|direct)/i.test(outbound.tag || "");
+						if (!isDirect) {
+							outbound.tls.ech = {
+								enabled: true,
+								query_server_name: ECH_SNI,// 等待 1.13.0+ 版本上线
+								//config: `-----BEGIN ECH CONFIGS-----\n${ech_config}\n-----END ECH CONFIGS-----`
+							};
+						}
 					}
 				}
 			});
