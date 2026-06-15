@@ -4498,7 +4498,7 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 			if (需要处理ECH && 获取凭据值(fullNode, true) === uuid.trim()) {
 				const nodeNameMatch = fullNode.match(/name:\s*['"]?([^'",\n]+)['"]?/);
 				const nodeName = nodeNameMatch ? nodeNameMatch[1].trim() : "";
-				const isDirect = /(直连|direct)/i.test(fullNode) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
+				const isDirect = /(直连|direct)/i.test(nodeName) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
 				if (!isDirect) {
 					fullNode = fullNode.replace(/\}(\s*)$/, `, ech-opts: {enable: true${ECH_SNI ? `, query-server-name: ${ECH_SNI}` : ''}}}$1`);
 				}
@@ -4536,7 +4536,7 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 			if (需要处理ECH && 获取凭据值(nodeText, false) === uuid.trim()) {
 				const nodeNameMatch = nodeText.match(/- name:\s*['"]?([^'"\n]+)['"]?/);
 				const nodeName = nodeNameMatch ? nodeNameMatch[1].trim() : "";
-				const isDirect = /(直连|direct)/i.test(nodeText) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
+				const isDirect = /(直连|direct)/i.test(nodeName) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
 				if (!isDirect) {
 					nodeLines = 添加Block格式ECHOpts(nodeLines, topLevelIndent);
 				}
