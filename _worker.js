@@ -437,6 +437,7 @@ export default {
 							
 							// 1. 生成直连 VPS 节点
 							if (config_JSON.VPS_NODES && Array.isArray(config_JSON.VPS_NODES.DIRECT)) {
+								config_JSON.DirectNodeNames = config_JSON.DirectNodeNames || new Set();
 								for (const node of config_JSON.VPS_NODES.DIRECT) {
 									try {
 										if (node.rawLink) {
@@ -444,6 +445,7 @@ export default {
 											const hashIdx = link.indexOf('#');
 											const baseLink = hashIdx > -1 ? link.slice(0, hashIdx) : link;
 											const remark = node.remark || (hashIdx > -1 ? decodeURIComponent(link.slice(hashIdx + 1)) : node.address);
+											config_JSON.DirectNodeNames.add(remark.trim());
 											link = baseLink + '#' + encodeURIComponent(remark);
 											自定义节点列表.push(link);
 											continue;
@@ -460,6 +462,7 @@ export default {
 										const sni = node.sni || host;
 										const path = node.path || '/';
 										const remark = node.remark || node.address;
+										config_JSON.DirectNodeNames.add(remark.trim());
 										
 										let queryParams = `security=${security}&type=${transport}`;
 										if (transport === 'grpc') {
@@ -4493,7 +4496,9 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 			}
 			if (需要处理gRPC) fullNode = 添加Flow格式gRPCUserAgent(fullNode);
 			if (需要处理ECH && 获取凭据值(fullNode, true) === uuid.trim()) {
-				const isDirect = /(直连|direct)/i.test(fullNode);
+				const nodeNameMatch = fullNode.match(/name:\s*['"]?([^'",\n]+)['"]?/);
+				const nodeName = nodeNameMatch ? nodeNameMatch[1].trim() : "";
+				const isDirect = /(直连|direct)/i.test(fullNode) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
 				if (!isDirect) {
 					fullNode = fullNode.replace(/\}(\s*)$/, `, ech-opts: {enable: true${ECH_SNI ? `, query-server-name: ${ECH_SNI}` : ''}}}$1`);
 				}
@@ -4529,7 +4534,9 @@ function Clash订阅配置文件热补丁(Clash_原始订阅内容, config_JSON 
 				nodeText = nodeLines.join('\n');
 			}
 			if (需要处理ECH && 获取凭据值(nodeText, false) === uuid.trim()) {
-				const isDirect = /(直连|direct)/i.test(nodeText);
+				const nodeNameMatch = nodeText.match(/- name:\s*['"]?([^'"\n]+)['"]?/);
+				const nodeName = nodeNameMatch ? nodeNameMatch[1].trim() : "";
+				const isDirect = /(直连|direct)/i.test(nodeText) || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has(nodeName));
 				if (!isDirect) {
 					nodeLines = 添加Block格式ECHOpts(nodeLines, topLevelIndent);
 				}
@@ -4807,7 +4814,7 @@ async function Singbox订阅配置文件热补丁(SingBox_原始订阅内容, co
 
 					// 如果提供了 ech_config，添加/更新 ech 配置
 					if (ECH启用) {
-						const isDirect = /(直连|direct)/i.test(outbound.tag || "");
+						const isDirect = /(直连|direct)/i.test(outbound.tag || "") || (config_JSON.DirectNodeNames && config_JSON.DirectNodeNames.has((outbound.tag || "").trim()));
 						if (!isDirect) {
 							outbound.tls.ech = {
 								enabled: true,
